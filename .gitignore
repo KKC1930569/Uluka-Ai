@@ -1,0 +1,12 @@
+node_modules/
+__pycache__/
+*.pyc
+*.log
+.env
+.env.local
+.DS_Store
+dist/
+setup_config.py
+create_src.py
+write_workspace.py
+rewrite_challenge.py

@@ -1,0 +1,150 @@
+{
+  "case": "ULK-007",
+  "title": "CASE #007: THE CIPHER CORRIDOR",
+  "briefing": "A suspicious cross-district activity pattern has been detected across two regional rings. You do NOT have all the information. You have 10 Investigation Points to query phone registries, toll logs, and CDRs. Find the hidden bridge before points run out.",
+  "initialPoints": 10,
+  "nodes": [
+    { "id": "A", "label": "Person A (Ravi K.)", "group": "Group 1", "role": "Cluster 1 Leader", "isBridge": false },
+    { "id": "B", "label": "Phone A (+91 98..21)", "group": "Group 1", "role": "Burner Phone", "isBridge": false },
+    { "id": "C", "label": "Location A (Guntur Hub)", "group": "Group 1", "role": "Logistics Yard", "isBridge": false },
+    { "id": "X", "label": "Person D (Vicky Rao)", "group": "Bridge", "role": "Hidden Intermediary", "isBridge": true },
+    { "id": "D", "label": "Person B (Ajay Singh)", "group": "Group 2", "role": "Cluster 2 Leader", "isBridge": false },
+    { "id": "E", "label": "Phone B (+91 97..00)", "group": "Group 2", "role": "Transport Phone", "isBridge": false }
+  ],
+  "clues": [
+    {
+      "id": "CLUE_01",
+      "cost": 1,
+      "type": "PHONE",
+      "actionName": "Search Phone",
+      "title": "CLUE #01: Burner Line 98XXXXXX21",
+      "preview": "Logged late night outbound bursts.",
+      "result": {
+        "entity": "Ravi K. (Person A)",
+        "vehicle": "AP39AB1234",
+        "confidence": "HIGH",
+        "details": "Outgoing encrypted calls observed right before highway transit. No direct call to Group 2 leader."
+      },
+      "isLead": true,
+      "pointsDelta": 10
+    },
+    {
+      "id": "CLUE_02",
+      "cost": 1,
+      "type": "LOCATION",
+      "actionName": "Search Location",
+      "title": "CLUE #02: Station Junction Hub",
+      "preview": "High-density transit coordinates ping.",
+      "result": {
+        "entity": "Secunderabad Railway Terminal",
+        "warning": "CAUTION: HIGH DENSITY RED HERRING",
+        "confidence": "MISLEADING",
+        "details": "Over 19 unrelated civilian entities pinged this exact cell tower on the same evening. This is a deliberate false correlation!"
+      },
+      "isRedHerring": true,
+      "pointsDelta": -15
+    },
+    {
+      "id": "CLUE_03",
+      "cost": 1,
+      "type": "VEHICLE",
+      "actionName": "Search Vehicle",
+      "title": "CLUE #03: Creta TS09XY5512",
+      "preview": "Suryapet Toll Plaza FASTag crossing.",
+      "result": {
+        "entity": "Registered to Vikram 'Vicky' Rao (Person D)",
+        "confidence": "VERY HIGH",
+        "details": "Crossed Suryapet Toll at 23:30, bridging the transit gap between Guntur and Cyberabad convoys."
+      },
+      "isLead": true,
+      "pointsDelta": 15
+    },
+    {
+      "id": "CLUE_04",
+      "cost": 2,
+      "type": "CDR",
+      "actionName": "Inspect CDR",
+      "title": "CLUE #04: CDR #183 Intermediary Relay",
+      "preview": "Cross-network toll call trace.",
+      "result": {
+        "entity": "Phone 99XXXXXX88 (Vikram Rao)",
+        "confidence": "CONFIRMED BRIDGE",
+        "details": "Direct 7-minute voice call with Person A (Guntur) at 22:43, followed by a 4-minute call to Person B (Cyberabad) at 01:12. Zero calls between A and B!"
+      },
+      "isLead": true,
+      "pointsDelta": 20
+    },
+    {
+      "id": "CLUE_05",
+      "cost": 2,
+      "type": "TIMELINE",
+      "actionName": "Inspect Timeline",
+      "title": "CLUE #05: 14 March Midnight Window",
+      "preview": "Temporal correlation sequence.",
+      "result": {
+        "entity": "Synchronized Highway Movements",
+        "confidence": "HIGH",
+        "details": "Group 1 vehicle leaves Guntur at 21:00. Person D meets midway at Suryapet at 23:30. Group 2 vehicle arrives Cyberabad at 02:00."
+      },
+      "isLead": true,
+      "pointsDelta": 10
+    },
+    {
+      "id": "CLUE_06",
+      "cost": 3,
+      "type": "NETWORK",
+      "actionName": "Analyze Network",
+      "title": "CLUE #06: Betweenness Centrality",
+      "preview": "Calculate network bridge scores.",
+      "result": {
+        "entity": "Bridge Node Isolation",
+        "confidence": "CRITICAL",
+        "details": "Person D (Vikram Rao) exhibits a betweenness centrality of 0.88, serving as the sole topological connector between the two otherwise disjoint rings."
+      },
+      "isLead": true,
+      "pointsDelta": 25
+    },
+    {
+      "id": "CLUE_07",
+      "cost": 2,
+      "type": "HINT",
+      "actionName": "Reveal Hint",
+      "title": "CLUE #07: Intelligence Briefing Hint",
+      "preview": "Analyst advisory note.",
+      "result": {
+        "entity": "Operational Doctrine",
+        "confidence": "ANALYST ADVISORY",
+        "details": "Do NOT trust high-frequency shared locations in civilian public transit. Look for the entity with bridging calls and midpoint highway movement."
+      },
+      "isLead": true,
+      "pointsDelta": 5
+    }
+  ],
+  "intermediaryCandidates": [
+    {
+      "id": "A",
+      "name": "Person A (Ravi Kumar)",
+      "isCorrect": false,
+      "feedback": "Incorrect. Person A is the coordinator of Group 1, not the intermediary bridge."
+    },
+    {
+      "id": "B",
+      "name": "Person B (Contractor at Station)",
+      "isCorrect": false,
+      "feedback": "False lead! You fell for the red-herring public railway station where 19 unrelated civilians pinged the same tower."
+    },
+    {
+      "id": "C",
+      "name": "Person C (Ajay Singh)",
+      "isCorrect": false,
+      "feedback": "Incorrect. Person C is the dispatch lead of Group 2, having no direct contact with Group 1."
+    },
+    {
+      "id": "D",
+      "name": "Person D (Vikram 'Vicky' Rao)",
+      "isCorrect": true,
+      "feedback": "CORRECT! Vikram Rao is the hidden intermediary bridging both groups via CDR #183 and Suryapet Toll Hub."
+    }
+  ],
+  "correctAnswer": "D"
+}
