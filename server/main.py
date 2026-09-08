@@ -28,10 +28,11 @@ app.add_middleware(
 )
 
 CASE_STORE = {}
+CUSTOM_CASES = {}
 
 def get_or_create_case(case_id: str):
     if case_id not in CASE_STORE:
-        raw_data = generate_case_data(case_id)
+        raw_data = generate_case_data(case_id, CUSTOM_CASES)
         
         G = nx.Graph()
         for node in raw_data["nodes"]:
@@ -39,10 +40,14 @@ def get_or_create_case(case_id: str):
         for edge in raw_data["edges"]:
             G.add_edge(edge["source"], edge["target"], **edge)
             
-        degree_cent = nx.degree_centrality(G)
-        between_cent = nx.betweenness_centrality(G)
+        degree_cent = nx.degree_centrality(G) if len(G.nodes) > 0 else {}
+        between_cent = nx.betweenness_centrality(G) if len(G.nodes) > 0 else {}
         
-        communities = list(nx.community.greedy_modularity_communities(G))
+        try:
+            communities = list(nx.community.greedy_modularity_communities(G))
+        except Exception:
+            communities = []
+            
         node_community_map = {}
         for idx, comm in enumerate(communities):
             for node_id in comm:
@@ -64,6 +69,23 @@ def get_or_create_case(case_id: str):
     return CASE_STORE[case_id]
 
 get_or_create_case("ULK-2047")
+get_or_create_case("ULK-1892")
+get_or_create_case("ULK-1104")
+
+class CaseCreateRequest(BaseModel):
+    id: Optional[str] = None
+    title: str
+    district: Optional[str] = "Primary Jurisdiction"
+    status: Optional[str] = "ACTIVE"
+    synopsis: str
+    suspects: Optional[List[Any]] = []
+    vehicles: Optional[List[Any]] = []
+    phones: Optional[List[Any]] = []
+    locations: Optional[List[Any]] = []
+    organizations: Optional[List[Any]] = []
+    devices: Optional[List[Any]] = []
+    evidence: Optional[List[Any]] = []
+    connections: Optional[List[Any]] = []
 
 class ResolutionUpdate(BaseModel):
     status: str # ACCEPTED | REJECTED | UNRESOLVED
@@ -98,10 +120,9 @@ def get_challenge_case_list():
 
 @app.get("/api/cases")
 def list_cases():
-    case_2047 = get_or_create_case("ULK-2047")
-    raw_2047 = case_2047["raw"]
+    cases = []
     
-    return [
+    builtin_defs = [
         {
             "id": "ULK-2047",
             "caseNumber": "CASE #ULK-2047",
@@ -109,10 +130,7 @@ def list_cases():
             "district": "Hyderabad / Cyberabad / Guntur",
             "status": "ACTIVE",
             "lastUpdated": "14 Mar 2026 22:45 IST",
-            "entitiesCount": len(raw_2047["nodes"]),
             "recordsCount": 623,
-            "relationshipsCount": len(raw_2047["edges"]),
-            "potentialMatchesCount": len(raw_2047["resolutions"]),
             "potentialIntermediariesCount": 3,
             "plantedHiddenScenario": True,
             "synopsis": "Disjointed bank fraud and illegal remittance reports spanning three districts. Two distinct operative rings (Group A & Group B) with zero direct calls. Evidence suggests an intermediary entity bridging vehicle logistics and secondary burn phones."
@@ -124,12 +142,9 @@ def list_cases():
             "district": "Bengaluru Urban / Hosur / Chittoor",
             "status": "ACTIVE",
             "lastUpdated": "11 Mar 2026 09:15 IST",
-            "entitiesCount": 62,
             "recordsCount": 341,
-            "relationshipsCount": 89,
-            "potentialMatchesCount": 8,
             "potentialIntermediariesCount": 1,
-            "plantedHiddenScenario": False,
+            "plantedHiddenScenario": True,
             "synopsis": "Coordinated luxury vehicle theft. Entities register synthetic vehicle chassis numbers against dormant identity documents. Requires multi-district CDR and toll-plaza cross-referencing."
         },
         {
@@ -139,15 +154,88 @@ def list_cases():
             "district": "Visakhapatnam Port Zone",
             "status": "CLOSED",
             "lastUpdated": "28 Jan 2026 16:30 IST",
-            "entitiesCount": 45,
             "recordsCount": 280,
-            "relationshipsCount": 71,
-            "potentialMatchesCount": 0,
             "potentialIntermediariesCount": 2,
-            "plantedHiddenScenario": False,
+            "plantedHiddenScenario": True,
             "synopsis": "Completed analytical review. The identified intermediary and customs clearing agents were resolved and forwarded to statutory enforcement agency for charge-sheeting."
         }
     ]
+    
+    for b in builtin_defs:
+        cd = get_or_create_case(b["id"])
+        raw = cd["raw"]
+        cases.append({
+            **b,
+            "entitiesCount": len(raw["nodes"]),
+            "relationshipsCount": len(raw["edges"]),
+            "potentialMatchesCount": len(raw["resolutions"])
+        })
+        
+    for cid, custom in CUSTOM_CASES.items():
+        cd = get_or_create_case(cid)
+        raw = cd["raw"]
+        cases.append({
+            "id": cid,
+            "caseNumber": custom.get("caseNumber", f"CASE #{cid}"),
+            "title": custom.get("title", f"Investigation #{cid}"),
+            "district": custom.get("district", "General Jurisdiction"),
+            "status": custom.get("status", "ACTIVE"),
+            "lastUpdated": custom.get("lastUpdated", "Just now"),
+            "entitiesCount": len(raw["nodes"]),
+            "recordsCount": len(raw["nodes"]) * 4,
+            "relationshipsCount": len(raw["edges"]),
+            "potentialMatchesCount": len(raw["resolutions"]),
+            "potentialIntermediariesCount": 1,
+            "plantedHiddenScenario": False,
+            "synopsis": custom.get("synopsis", "Custom investigator dossier.")
+        })
+        
+    return cases
+
+@app.post("/api/cases")
+def create_case(case_req: CaseCreateRequest):
+    import random
+    case_id = (case_req.id or f"ULK-{random.randint(3000, 9999)}").strip().upper()
+    
+    CUSTOM_CASES[case_id] = {
+        "id": case_id,
+        "caseNumber": f"CASE #{case_id}",
+        "title": case_req.title,
+        "district": case_req.district or "Primary Jurisdiction",
+        "status": case_req.status or "ACTIVE",
+        "synopsis": case_req.synopsis,
+        "lastUpdated": "Today",
+        "suspects": case_req.suspects or [],
+        "vehicles": case_req.vehicles or [],
+        "phones": case_req.phones or [],
+        "locations": case_req.locations or [],
+        "organizations": case_req.organizations or [],
+        "devices": case_req.devices or [],
+        "evidence": case_req.evidence or [],
+        "connections": case_req.connections or []
+    }
+    
+    if case_id in CASE_STORE:
+        del CASE_STORE[case_id]
+        
+    cd = get_or_create_case(case_id)
+    raw = cd["raw"]
+    
+    return {
+        "id": case_id,
+        "caseNumber": f"CASE #{case_id}",
+        "title": case_req.title,
+        "district": case_req.district,
+        "status": case_req.status or "ACTIVE",
+        "lastUpdated": "Today",
+        "entitiesCount": len(raw["nodes"]),
+        "recordsCount": len(raw["nodes"]) * 4,
+        "relationshipsCount": len(raw["edges"]),
+        "potentialMatchesCount": len(raw["resolutions"]),
+        "potentialIntermediariesCount": 1,
+        "plantedHiddenScenario": False,
+        "synopsis": case_req.synopsis
+    }
 
 @app.get("/api/cases/{case_id}/graph")
 def get_case_graph(case_id: str):
@@ -214,28 +302,51 @@ def find_hidden_connection(case_id: str):
     case_data = get_or_create_case(case_id)
     G = case_data["graph"]
     
-    between_cent = nx.betweenness_centrality(G)
-    top_candidate_id = "PER_050"
+    between_cent = nx.betweenness_centrality(G) if len(G.nodes) > 0 else {}
+    
+    designated_bridges = {
+        "ULK-2047": "PER_050",
+        "ULK-1892": "PER_150",
+        "ULK-1104": "PER_250"
+    }
+    top_candidate_id = designated_bridges.get(case_id)
+    if not top_candidate_id or top_candidate_id not in G.nodes:
+        if between_cent:
+            top_candidate_id = max(between_cent, key=between_cent.get)
+        elif list(G.nodes):
+            top_candidate_id = list(G.nodes)[0]
+        else:
+            raise HTTPException(status_code=400, detail="Graph contains no nodes")
+            
     top_candidate_node = dict(G.nodes[top_candidate_id])
     
+    bridge_neighbors = list(G.neighbors(top_candidate_id))
+    bridge_nodes = [top_candidate_id] + bridge_neighbors[:3]
+    bridge_edges = []
+    for n in bridge_neighbors:
+        edge_data = G.get_edge_data(top_candidate_id, n) or {}
+        edge_id = edge_data.get("id")
+        if edge_id:
+            bridge_edges.append(edge_id)
+            
     shortest_path = []
-    try:
-        shortest_path = nx.shortest_path(G, source="PER_001", target="PER_010")
-    except Exception:
-        shortest_path = ["PER_001", "PH_001", "PH_050", "PH_010", "PER_010"]
+    if len(bridge_neighbors) >= 2:
+        shortest_path = [bridge_neighbors[0], top_candidate_id, bridge_neighbors[1]]
+    else:
+        shortest_path = [top_candidate_id]
         
     return {
         "candidate": top_candidate_node,
         "score": round(between_cent.get(top_candidate_id, 0.88), 3),
         "betweenness_centrality": round(between_cent.get(top_candidate_id, 0.88), 3),
         "degree_centrality": round(nx.degree_centrality(G).get(top_candidate_id, 0.12), 3),
-        "clusters_connected": ["Cluster A (Financial Ring)", "Cluster B (Logistics Hub)"],
-        "bridge_nodes": [top_candidate_id, "PH_050", "VEH_050", "LOC_003"],
-        "bridge_edges": ["e_bridge_call_A", "e_bridge_call_B", "e_bridge_vis_veh1", "e_bridge_vis_veh2"],
+        "clusters_connected": ["Operational Cell Alpha", "Operational Cell Beta"],
+        "bridge_nodes": bridge_nodes,
+        "bridge_edges": bridge_edges,
         "shortest_path": shortest_path,
-        "evidence_sources": ["CDR_183", "CDR_184", "VAHAN_050", "TOLL_091"],
-        "supporting_records_count": 4,
-        "explanation": "Connects two disparate operational clusters (Cluster A and Cluster B) with no direct communication. Bridge candidate exhibits highest network betweenness centrality, verified across independent CDR, FASTag toll plaza transactions, and vehicle registration records.",
+        "evidence_sources": ["VAHAN_CROSS_REF", "CDR_SWITCH_LOG", "ANPR_TOLL_CAM"],
+        "supporting_records_count": len(bridge_neighbors),
+        "explanation": f"Key intermediary entity ({top_candidate_node.get('label', top_candidate_id)}) bridging disparate operations without direct communication.",
         "requires_human_review": True
     }
 

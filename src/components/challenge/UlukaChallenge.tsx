@@ -52,6 +52,26 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
   // Result state
   const [finalResult, setFinalResult] = useState<ChallengeResult | null>(null);
 
+  // Combine allEntities and suspects into availableEntities for the Add Node modal
+  const availableEntities: ChallengeEntity[] = React.useMemo(() => {
+    const list: ChallengeEntity[] = [...(currentCase.allEntities || [])];
+    const existingIds = new Set(list.map(e => e.id));
+    if (currentCase.suspects) {
+      for (const s of currentCase.suspects) {
+        if (!existingIds.has(s.id)) {
+          list.push({
+            id: s.id,
+            label: s.name,
+            type: 'SUSPECT',
+            description: `${s.role}${s.background ? ' • ' + s.background : ''}`
+          });
+          existingIds.add(s.id);
+        }
+      }
+    }
+    return list;
+  }, [currentCase]);
+
   // Reset or start a new game configuration
   const initializeGame = useCallback((caseId: string, newSeed: string) => {
     const baseCase = getCaseById(caseId);
@@ -390,11 +410,52 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
         {/* ACTIVE PLAYING STAGE */}
         {stage === 'PLAYING' && (
           <div className="space-y-4 sm:space-y-6">
+            {/* Active Case Full Description Banner (Untruncated, PC & Mobile) */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 sm:p-5 shadow-lg backdrop-blur-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800/80 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {currentCase.id}
+                  </span>
+                  <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
+                    {currentCase.category}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">
+                    {currentCase.difficulty}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 flex items-center gap-1.5 font-mono">
+                  <span>SEED:</span>
+                  <span className="text-amber-400">{currentSeed}</span>
+                </div>
+              </div>
+              
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
+                {currentCase.title}
+              </h2>
+              <p className="text-sm font-medium text-amber-300/90 mb-3">
+                {currentCase.subtitle}
+              </p>
+
+              <div className="bg-slate-950/60 rounded-lg p-3.5 border border-slate-800/60 text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line mb-3">
+                {currentCase.briefing}
+              </div>
+
+              <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs sm:text-sm text-amber-200">
+                <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-amber-300">Target Question: </span>
+                  <span>{currentCase.targetQuestion}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Billboard Canvas (Player Connects the Dots) */}
             <section>
               <InvestigationBoard
                 nodes={boardNodes}
                 edges={boardEdges}
+                availableEntities={availableEntities}
                 onAddNode={handleAddBoardNode}
                 onRemoveNode={handleRemoveBoardNode}
                 onUpdateNodePosition={handleUpdateNodePosition}

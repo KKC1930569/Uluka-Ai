@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AppView } from '../../types';
 import { CytoscapeCanvas } from './CytoscapeCanvas';
+import { SymbolLegend } from '../common/SymbolLegend';
+import { mockCases } from './CaseList';
+import { fetchCases } from '../../api';
 import { 
   fetchCaseGraph, 
   fetchHiddenConnection, 
@@ -32,6 +35,16 @@ interface InvestigationWorkspaceProps {
 
 export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ caseId }) => {
   const [elements, setElements] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  const [caseInfo, setCaseInfo] = useState<any>(() => {
+    return mockCases.find(c => c.id === caseId) || {
+      id: caseId,
+      caseNumber: `CASE #${caseId}`,
+      title: `Investigation Dossier ${caseId}`,
+      district: 'Multi-Jurisdiction',
+      status: 'ACTIVE',
+      synopsis: 'Intelligence network workspace for multi-source entity resolution, link analysis, and bridge detection.'
+    };
+  });
   const [loadingGraph, setLoadingGraph] = useState(true);
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<any | null>(null);
@@ -71,7 +84,9 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
         const graphData = await fetchCaseGraph(caseId);
         if (graphData && graphData.elements) {
           setElements(graphData.elements);
-          const defaultNode = graphData.elements.nodes.find((n: any) => n.data.id === 'PER_001');
+          const defaultNode = graphData.elements.nodes.find((n: any) => 
+            n.data.id === 'PER_001' || n.data.id === 'PER_101' || n.data.id === 'PER_201' || n.data.id.startsWith('SUS_')
+          ) || graphData.elements.nodes[0];
           if (defaultNode) {
             setSelectedNode(defaultNode.data);
           }
@@ -80,6 +95,11 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
         if (resData) {
           setResolutions(resData);
         }
+        const allCases = await fetchCases();
+        if (allCases && Array.isArray(allCases)) {
+          const found = allCases.find((c: any) => c.id === caseId);
+          if (found) setCaseInfo(found);
+        }
       } catch (err) {
         console.error('Error loading graph:', err);
       } finally {
@@ -87,15 +107,38 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
       }
     }
     loadData();
+
+    // Default search seed based on case
+    if (caseId === 'ULK-1892') {
+      setQueryInput('Imran Khan');
+    } else if (caseId === 'ULK-1104') {
+      setQueryInput('Capt. Hemant Bose');
+    } else if (caseId === 'ULK-2047') {
+      setQueryInput('Ravi Kumar');
+    }
   }, [caseId]);
 
   const handleStartTypeChange = (type: 'PERSON' | 'PHONE' | 'VEHICLE' | 'CASE' | 'LOCATION') => {
     setStartingType(type);
-    if (type === 'PERSON') setQueryInput('Ravi Kumar');
-    if (type === 'PHONE') setQueryInput('+91 9876543221');
-    if (type === 'VEHICLE') setQueryInput('AP39AB1234');
-    if (type === 'CASE') setQueryInput('FIR #021/2026');
-    if (type === 'LOCATION') setQueryInput('Guntur Warehouse Yard');
+    if (caseId === 'ULK-1892') {
+      if (type === 'PERSON') setQueryInput('Imran Khan');
+      if (type === 'PHONE') setQueryInput('+91 9845012345');
+      if (type === 'VEHICLE') setQueryInput('KA05MN4412');
+      if (type === 'CASE') setQueryInput('FIR #402/2026');
+      if (type === 'LOCATION') setQueryInput('Hosur Phase-II');
+    } else if (caseId === 'ULK-1104') {
+      if (type === 'PERSON') setQueryInput('Capt. Hemant Bose');
+      if (type === 'PHONE') setQueryInput('+91 8912345678');
+      if (type === 'VEHICLE') setQueryInput('AP31TT5510');
+      if (type === 'CASE') setQueryInput('DRI Seizure Memo');
+      if (type === 'LOCATION') setQueryInput('Berth #4');
+    } else {
+      if (type === 'PERSON') setQueryInput('Ravi Kumar');
+      if (type === 'PHONE') setQueryInput('+91 9876543221');
+      if (type === 'VEHICLE') setQueryInput('AP39AB1234');
+      if (type === 'CASE') setQueryInput('FIR #021/2026');
+      if (type === 'LOCATION') setQueryInput('Guntur Warehouse Yard');
+    }
   };
 
   const handleInvestigateSeed = () => {
@@ -171,7 +214,7 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
                 ACTIVE INVESTIGATION
               </span>
               <span className="text-xs text-slate-500">•</span>
-              <span className="text-xs text-slate-300 font-medium">Cross-District Financial & Hawala Investigation</span>
+              <span className="text-xs text-slate-300 font-medium">{caseInfo?.title || "Criminal Network Investigation"}</span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Live Network Graph: {elements.nodes.length} Entities • {elements.edges.length} Relationships • 4 Match Candidates • 1 Planted Bridge Scenario
@@ -203,6 +246,47 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
             <Sparkles className={`w-4 h-4 ${analyzingHidden ? 'animate-spin' : ''}`} />
             <span>{analyzingHidden ? 'ANALYZING GRAPH...' : '🔎 FIND HIDDEN CONNECTION'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Active Case Full Description & Legend Banner (Untruncated, Responsive) */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 sm:p-5 mb-4 shadow-lg backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="space-y-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs font-bold text-cyan-400 bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-800">
+                {caseInfo?.caseNumber || `CASE #${caseId}`}
+              </span>
+              <span className={`px-2 py-0.5 text-[10px] font-mono uppercase rounded font-semibold border ${
+                caseInfo?.status === 'CLOSED'
+                  ? 'bg-slate-800 text-slate-300 border-slate-700'
+                  : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+              }`}>
+                {caseInfo?.status || 'ACTIVE'}
+              </span>
+              <span className="text-xs text-slate-400 font-mono">
+                Jurisdiction: <span className="text-slate-300 font-medium">{caseInfo?.district || 'Multi-District'}</span>
+              </span>
+              {caseInfo?.lastUpdated && (
+                <span className="text-[11px] text-slate-500 font-mono hidden sm:inline">
+                  • Last Sync: {caseInfo.lastUpdated}
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-base sm:text-xl font-bold text-white tracking-wide">
+              {caseInfo?.title || `Investigation Dossier — ${caseId}`}
+            </h2>
+
+            <div className="bg-slate-950/70 rounded-lg p-3 border border-slate-800/80 text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+              {caseInfo?.synopsis || 'Disjointed intelligence reports spanning multiple jurisdictions. Connect disparate entities, resolve duplicate identities, and identify covert intermediaries bridging operational cells.'}
+            </div>
+          </div>
+
+          {/* Symbol Legend Trigger & Legend Panel */}
+          <div className="lg:w-80 shrink-0">
+            <SymbolLegend defaultExpanded={false} />
+          </div>
         </div>
       </div>
 
