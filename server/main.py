@@ -86,6 +86,16 @@ def health_check():
         "active_cases": len(CASE_STORE)
     }
 
+@app.get("/api/challenge/cases")
+def get_challenge_case_list():
+    return [
+        {"id": "ULK-001", "title": "OPERATION MIDNIGHT ECHO", "difficulty": "MEDIUM", "category": "Narcotics Logistics"},
+        {"id": "ULK-002", "title": "THE PHANTOM LEDGER", "difficulty": "HARD", "category": "Corporate Embezzlement"},
+        {"id": "ULK-003", "title": "THE SILICON BREACH", "difficulty": "HARD", "category": "SCADA Cyber Sabotage"},
+        {"id": "ULK-004", "title": "THE GOLDEN FALCON", "difficulty": "HARD", "category": "Antiquities Transit Heist"},
+        {"id": "ULK-005", "title": "THE BLACK VIPER", "difficulty": "EXPERT", "category": "Precursor Chemical Diversion"}
+    ]
+
 @app.get("/api/cases")
 def list_cases():
     case_2047 = get_or_create_case("ULK-2047")
