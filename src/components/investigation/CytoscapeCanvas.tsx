@@ -31,14 +31,60 @@ export const CytoscapeCanvas: React.FC<CytoscapeCanvasProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const cy = cytoscape({
-      container: containerRef.current,
-      boxSelectionEnabled: false,
-      autounselectify: false,
-      elements: {
-        nodes: elements.nodes,
-        edges: elements.edges
-      },
+    // 1. Collect all valid node IDs
+    const rawNodes = elements?.nodes || [];
+    const rawEdges = elements?.edges || [];
+
+    const validNodeIdSet = new Set<string>();
+    const sanitizedNodes: any[] = [];
+
+    for (const node of rawNodes) {
+      const nid = node?.data?.id;
+      if (nid !== undefined && nid !== null && String(nid).trim().length > 0) {
+        validNodeIdSet.add(String(nid));
+        sanitizedNodes.push(node);
+      } else {
+        console.warn('[CytoscapeCanvas] Skipped malformed node without an ID:', node);
+      }
+    }
+
+    // 2. Validate and filter edges: both source and target MUST exist
+    const sanitizedEdges: any[] = [];
+    for (const edge of rawEdges) {
+      const edgeId = edge?.data?.id || 'unnamed-edge';
+      const source = edge?.data?.source;
+      const target = edge?.data?.target;
+
+      if (!source || !target) {
+        console.warn(`[CytoscapeCanvas] Skipped edge '${edgeId}': Missing source ('${source}') or target ('${target}').`);
+        continue;
+      }
+
+      const sStr = String(source);
+      const tStr = String(target);
+
+      if (!validNodeIdSet.has(sStr)) {
+        console.warn(`[CytoscapeCanvas] Skipped edge '${edgeId}': Nonexistent source node '${sStr}'.`);
+        continue;
+      }
+
+      if (!validNodeIdSet.has(tStr)) {
+        console.warn(`[CytoscapeCanvas] Skipped edge '${edgeId}': Nonexistent target node '${tStr}'.`);
+        continue;
+      }
+
+      sanitizedEdges.push(edge);
+    }
+
+    try {
+      const cyInstance = cytoscape({
+        container: containerRef.current,
+        boxSelectionEnabled: false,
+        autounselectify: false,
+        elements: {
+          nodes: sanitizedNodes,
+          edges: sanitizedEdges
+        },
       style: [
         {
           selector: 'node',
@@ -235,24 +281,30 @@ export const CytoscapeCanvas: React.FC<CytoscapeCanvasProps> = ({
       }
     });
 
-    cy.on('tap', 'node', (evt: EventObject) => {
+    cyInstance.on('tap', 'node', (evt: EventObject) => {
       onSelectNode(evt.target.data());
     });
 
-    cy.on('tap', 'edge', (evt: EventObject) => {
+    cyInstance.on('tap', 'edge', (evt: EventObject) => {
       onSelectEdge(evt.target.data());
     });
 
-    cy.on('tap', (evt: EventObject) => {
-      if (evt.target === cy) {
-        cy.elements().removeClass('dimmed');
+    cyInstance.on('tap', (evt: EventObject) => {
+      if (evt.target === cyInstance) {
+        cyInstance.elements().removeClass('dimmed');
       }
     });
 
-    cyRef.current = cy;
+    cyRef.current = cyInstance;
+    } catch (err) {
+      console.error('[CytoscapeCanvas] Failed to initialize Cytoscape instance:', err);
+    }
 
     return () => {
-      cy.destroy();
+      if (cyRef.current) {
+        cyRef.current.destroy();
+        cyRef.current = null;
+      }
     };
   }, [elements]);
 

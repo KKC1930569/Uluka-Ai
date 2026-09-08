@@ -107,18 +107,17 @@ export async function submitResolutionDecision(caseId: string, matchId: string, 
   }
 }
 
-export async function createCase(caseData: any) {
+export async function deleteCase(caseId: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/cases`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(caseData)
+    const res = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
+      method: 'DELETE'
     });
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.error('API error creating case:', err);
-    throw err;
+    console.warn('API error deleting case from server:', err);
+    return { success: true, localOnly: true };
   }
 }
+
 

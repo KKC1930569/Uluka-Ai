@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AppView } from '../../types';
 import { CytoscapeCanvas } from './CytoscapeCanvas';
-import { SymbolLegend } from '../common/SymbolLegend';
 import { mockCases } from './CaseList';
+import { deleteCase } from '../../api';
 import { fetchCases } from '../../api';
 import { 
   fetchCaseGraph, 
@@ -25,7 +25,10 @@ import {
   FileCheck, 
   X, 
   RotateCcw, 
-  ArrowRight
+  ArrowRight,
+  ArrowLeft,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface InvestigationWorkspaceProps {
@@ -33,7 +36,7 @@ interface InvestigationWorkspaceProps {
   onNavigate: (view: AppView) => void;
 }
 
-export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ caseId }) => {
+export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ caseId, onNavigate }) => {
   const [elements, setElements] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
   const [caseInfo, setCaseInfo] = useState<any>(() => {
     return mockCases.find(c => c.id === caseId) || {
@@ -77,13 +80,60 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
 
   const [resolutions, setResolutions] = useState<any[]>([]);
   const [showResolutionsModal, setShowResolutionsModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isProtected = caseId === 'ULK-2047' || caseInfo?.plantedHiddenScenario;
+
+  const handleConfirmDeleteCurrentCase = async () => {
+    try {
+      const savedDeleted = localStorage.getItem('uluka_deleted_cases');
+      const currentList: string[] = savedDeleted ? JSON.parse(savedDeleted) : [];
+      const updatedList = [...new Set([...currentList, caseId])];
+      localStorage.setItem('uluka_deleted_cases', JSON.stringify(updatedList));
+    } catch {}
+
+    await deleteCase(caseId);
+    setShowDeleteConfirm(false);
+    onNavigate('cases');
+  };
   useEffect(() => {
     async function loadData() {
       setLoadingGraph(true);
       try {
+        // Check if case is deleted
+        try {
+          const savedDeleted = localStorage.getItem('uluka_deleted_cases');
+          const deletedSet = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+          if (deletedSet.has(caseId)) {
+            onNavigate('cases');
+            return;
+          }
+        } catch {}
+
         const graphData = await fetchCaseGraph(caseId);
         if (graphData && graphData.elements) {
-          setElements(graphData.elements);
+          const rawNodes = graphData.elements.nodes || [];
+          const rawEdges = graphData.elements.edges || [];
+          const validNodeIds = new Set<string>();
+          const safeNodes: any[] = [];
+          for (const n of rawNodes) {
+            const nid = n?.data?.id;
+            if (nid !== undefined && nid !== null && String(nid).trim().length > 0) {
+              validNodeIds.add(String(nid));
+              safeNodes.push(n);
+            }
+          }
+          const safeEdges: any[] = [];
+          for (const e of rawEdges) {
+            const s = e?.data?.source;
+            const t = e?.data?.target;
+            if (s && t && validNodeIds.has(String(s)) && validNodeIds.has(String(t))) {
+              safeEdges.push(e);
+            } else {
+              console.warn(`[InvestigationWorkspace] Skipped invalid edge in case ${caseId}:`, e);
+            }
+          }
+          setElements({ nodes: safeNodes, edges: safeEdges });
           const defaultNode = graphData.elements.nodes.find((n: any) => 
             n.data.id === 'PER_001' || n.data.id === 'PER_101' || n.data.id === 'PER_201' || n.data.id.startsWith('SUS_')
           ) || graphData.elements.nodes[0];
@@ -222,8 +272,28 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
           </div>
         </div>
 
-        {/* Action Button: FIND HIDDEN CONNECTION */}
-        <div className="flex items-center gap-2">
+        {/* Top Header Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => onNavigate('cases')}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium text-xs border border-slate-800 transition-colors"
+            title="Return to Case Repository"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Cases</span>
+          </button>
+
+          {!isProtected && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 hover:bg-red-950/50 text-slate-400 hover:text-red-400 font-medium text-xs border border-slate-800 hover:border-red-800/60 transition-colors"
+              title="Delete this case"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Delete Case</span>
+            </button>
+          )}
+
           {hiddenConnection && (
             <button
               onClick={handleResetHighlights}
@@ -283,10 +353,7 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
             </div>
           </div>
 
-          {/* Symbol Legend Trigger & Legend Panel */}
-          <div className="lg:w-80 shrink-0">
-            <SymbolLegend defaultExpanded={false} />
-          </div>
+
         </div>
       </div>
 
@@ -880,6 +947,51 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({ 
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Delete Case Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-800 flex items-center justify-center shrink-0 text-red-400">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Case</h3>
+                <p className="text-xs text-slate-400 font-mono">{caseInfo?.caseNumber || `CASE #${caseId}`}</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Are you sure you want to delete this case?
+            </p>
+
+            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300">
+              <div className="font-semibold text-white mb-0.5">{caseInfo?.title || caseId}</div>
+              <div className="text-[11px] text-slate-500">
+                This will remove its associated intelligence graph, suspect records, entity links, and case dossier.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteCurrentCase}
+                className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-950/50 transition-all active:scale-95"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

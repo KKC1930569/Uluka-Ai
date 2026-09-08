@@ -72,21 +72,6 @@ get_or_create_case("ULK-2047")
 get_or_create_case("ULK-1892")
 get_or_create_case("ULK-1104")
 
-class CaseCreateRequest(BaseModel):
-    id: Optional[str] = None
-    title: str
-    district: Optional[str] = "Primary Jurisdiction"
-    status: Optional[str] = "ACTIVE"
-    synopsis: str
-    suspects: Optional[List[Any]] = []
-    vehicles: Optional[List[Any]] = []
-    phones: Optional[List[Any]] = []
-    locations: Optional[List[Any]] = []
-    organizations: Optional[List[Any]] = []
-    devices: Optional[List[Any]] = []
-    evidence: Optional[List[Any]] = []
-    connections: Optional[List[Any]] = []
-
 class ResolutionUpdate(BaseModel):
     status: str # ACCEPTED | REJECTED | UNRESOLVED
     notes: Optional[str] = None
@@ -118,6 +103,8 @@ def get_challenge_case_list():
         {"id": "ULK-005", "title": "THE BLACK VIPER", "difficulty": "EXPERT", "category": "Precursor Chemical Diversion"}
     ]
 
+DELETED_CASES = set()
+
 @app.get("/api/cases")
 def list_cases():
     cases = []
@@ -144,7 +131,7 @@ def list_cases():
             "lastUpdated": "11 Mar 2026 09:15 IST",
             "recordsCount": 341,
             "potentialIntermediariesCount": 1,
-            "plantedHiddenScenario": True,
+            "plantedHiddenScenario": False,
             "synopsis": "Coordinated luxury vehicle theft. Entities register synthetic vehicle chassis numbers against dormant identity documents. Requires multi-district CDR and toll-plaza cross-referencing."
         },
         {
@@ -156,12 +143,14 @@ def list_cases():
             "lastUpdated": "28 Jan 2026 16:30 IST",
             "recordsCount": 280,
             "potentialIntermediariesCount": 2,
-            "plantedHiddenScenario": True,
+            "plantedHiddenScenario": False,
             "synopsis": "Completed analytical review. The identified intermediary and customs clearing agents were resolved and forwarded to statutory enforcement agency for charge-sheeting."
         }
     ]
     
     for b in builtin_defs:
+        if b["id"] in DELETED_CASES:
+            continue
         cd = get_or_create_case(b["id"])
         raw = cd["raw"]
         cases.append({
@@ -171,71 +160,19 @@ def list_cases():
             "potentialMatchesCount": len(raw["resolutions"])
         })
         
-    for cid, custom in CUSTOM_CASES.items():
-        cd = get_or_create_case(cid)
-        raw = cd["raw"]
-        cases.append({
-            "id": cid,
-            "caseNumber": custom.get("caseNumber", f"CASE #{cid}"),
-            "title": custom.get("title", f"Investigation #{cid}"),
-            "district": custom.get("district", "General Jurisdiction"),
-            "status": custom.get("status", "ACTIVE"),
-            "lastUpdated": custom.get("lastUpdated", "Just now"),
-            "entitiesCount": len(raw["nodes"]),
-            "recordsCount": len(raw["nodes"]) * 4,
-            "relationshipsCount": len(raw["edges"]),
-            "potentialMatchesCount": len(raw["resolutions"]),
-            "potentialIntermediariesCount": 1,
-            "plantedHiddenScenario": False,
-            "synopsis": custom.get("synopsis", "Custom investigator dossier.")
-        })
-        
     return cases
 
-@app.post("/api/cases")
-def create_case(case_req: CaseCreateRequest):
-    import random
-    case_id = (case_req.id or f"ULK-{random.randint(3000, 9999)}").strip().upper()
+@app.delete("/api/cases/{case_id}")
+def delete_case(case_id: str):
+    cid = case_id.strip().upper()
+    if cid == "ULK-2047":
+        raise HTTPException(status_code=400, detail="Cannot delete protected primary demo case.")
     
-    CUSTOM_CASES[case_id] = {
-        "id": case_id,
-        "caseNumber": f"CASE #{case_id}",
-        "title": case_req.title,
-        "district": case_req.district or "Primary Jurisdiction",
-        "status": case_req.status or "ACTIVE",
-        "synopsis": case_req.synopsis,
-        "lastUpdated": "Today",
-        "suspects": case_req.suspects or [],
-        "vehicles": case_req.vehicles or [],
-        "phones": case_req.phones or [],
-        "locations": case_req.locations or [],
-        "organizations": case_req.organizations or [],
-        "devices": case_req.devices or [],
-        "evidence": case_req.evidence or [],
-        "connections": case_req.connections or []
-    }
-    
-    if case_id in CASE_STORE:
-        del CASE_STORE[case_id]
+    DELETED_CASES.add(cid)
+    if cid in CASE_STORE:
+        del CASE_STORE[cid]
         
-    cd = get_or_create_case(case_id)
-    raw = cd["raw"]
-    
-    return {
-        "id": case_id,
-        "caseNumber": f"CASE #{case_id}",
-        "title": case_req.title,
-        "district": case_req.district,
-        "status": case_req.status or "ACTIVE",
-        "lastUpdated": "Today",
-        "entitiesCount": len(raw["nodes"]),
-        "recordsCount": len(raw["nodes"]) * 4,
-        "relationshipsCount": len(raw["edges"]),
-        "potentialMatchesCount": len(raw["resolutions"]),
-        "potentialIntermediariesCount": 1,
-        "plantedHiddenScenario": False,
-        "synopsis": case_req.synopsis
-    }
+    return {"success": True, "deleted_case_id": cid}
 
 @app.get("/api/cases/{case_id}/graph")
 def get_case_graph(case_id: str):
@@ -251,13 +188,17 @@ def get_case_graph(case_id: str):
             }
         })
         
+    valid_node_ids = set(n["data"]["id"] for n in cy_nodes)
     cy_edges = []
     for e in raw["edges"]:
-        cy_edges.append({
-            "data": {
-                **e
-            }
-        })
+        s = e.get("source")
+        t = e.get("target")
+        if s in valid_node_ids and t in valid_node_ids:
+            cy_edges.append({
+                "data": {
+                    **e
+                }
+            })
         
     return {
         "case_id": case_id,
