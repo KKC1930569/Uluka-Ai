@@ -145,22 +145,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, onOpenCase
               </p>
 
               <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-                A 90-second interactive game for jury & evaluators. Spend 10 investigation points to query phone logs, vehicle records, and CDRs. Beware of red-herring shared locations and identify the hidden bridge.
+                An interactive digital investigation game for jury & evaluators. Analyze forensic clues, place entities on the billboard, manually connect the dots, and indict the correct culprit.
               </p>
 
               {/* Game Feature Highlights */}
               <div className="space-y-2 rounded-lg bg-slate-950/60 border border-amber-950/50 p-3 mb-6 text-xs">
                 <div className="flex items-center justify-between text-slate-300">
-                  <span className="font-mono text-slate-400">POINTS BUDGET</span>
-                  <span className="font-mono text-amber-400 font-bold">10 Points</span>
+                  <span className="font-mono text-slate-400">SCENARIOS</span>
+                  <span className="font-mono text-amber-400 font-bold">5 Replayable Cases</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-300">
+                  <span className="font-mono text-slate-400">MECHANIC</span>
+                  <span className="text-slate-200">Billboard & Dot Connecting</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-300">
                   <span className="font-mono text-slate-400">OBJECTIVE</span>
-                  <span className="text-slate-200">Find the Intermediary</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span className="font-mono text-slate-400">TECH STACK</span>
-                  <span className="text-slate-400 font-mono">100% Client-Side JSON</span>
+                  <span className="text-cyan-300 font-mono font-bold">Indict True Culprit</span>
                 </div>
               </div>
             </div>

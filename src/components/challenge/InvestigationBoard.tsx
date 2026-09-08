@@ -23,16 +23,16 @@ interface InvestigationBoardProps {
 }
 
 const ENTITY_COLORS: Record<EntityType, { bg: string; border: string; text: string; badge: string }> = {
-  SUSPECT: { bg: 'bg-purple-950/70', border: 'border-purple-500/70', text: 'text-purple-300', badge: 'bg-purple-900 text-purple-200' },
-  PHONE: { bg: 'bg-amber-950/70', border: 'border-amber-500/70', text: 'text-amber-300', badge: 'bg-amber-900 text-amber-200' },
-  VEHICLE: { bg: 'bg-emerald-950/70', border: 'border-emerald-500/70', text: 'text-emerald-300', badge: 'bg-emerald-900 text-emerald-200' },
-  LOCATION: { bg: 'bg-sky-950/70', border: 'border-sky-500/70', text: 'text-sky-300', badge: 'bg-sky-900 text-sky-200' },
-  ACCOUNT: { bg: 'bg-cyan-950/70', border: 'border-cyan-500/70', text: 'text-cyan-300', badge: 'bg-cyan-900 text-cyan-200' },
-  ORGANIZATION: { bg: 'bg-indigo-950/70', border: 'border-indigo-500/70', text: 'text-indigo-300', badge: 'bg-indigo-900 text-indigo-200' },
-  DEVICE: { bg: 'bg-rose-950/70', border: 'border-rose-500/70', text: 'text-rose-300', badge: 'bg-rose-900 text-rose-200' },
-  EVIDENCE: { bg: 'bg-red-950/70', border: 'border-red-500/70', text: 'text-red-300', badge: 'bg-red-900 text-red-200' },
-  DOCUMENT: { bg: 'bg-slate-900/80', border: 'border-slate-500/70', text: 'text-slate-300', badge: 'bg-slate-800 text-slate-200' },
-  EVENT: { bg: 'bg-yellow-950/70', border: 'border-yellow-500/70', text: 'text-yellow-300', badge: 'bg-yellow-900 text-yellow-200' }
+  SUSPECT: { bg: 'bg-purple-950/80', border: 'border-purple-500/70', text: 'text-purple-300', badge: 'bg-purple-900 text-purple-200' },
+  PHONE: { bg: 'bg-amber-950/80', border: 'border-amber-500/70', text: 'text-amber-300', badge: 'bg-amber-900 text-amber-200' },
+  VEHICLE: { bg: 'bg-emerald-950/80', border: 'border-emerald-500/70', text: 'text-emerald-300', badge: 'bg-emerald-900 text-emerald-200' },
+  LOCATION: { bg: 'bg-sky-950/80', border: 'border-sky-500/70', text: 'text-sky-300', badge: 'bg-sky-900 text-sky-200' },
+  ACCOUNT: { bg: 'bg-cyan-950/80', border: 'border-cyan-500/70', text: 'text-cyan-300', badge: 'bg-cyan-900 text-cyan-200' },
+  ORGANIZATION: { bg: 'bg-indigo-950/80', border: 'border-indigo-500/70', text: 'text-indigo-300', badge: 'bg-indigo-900 text-indigo-200' },
+  DEVICE: { bg: 'bg-rose-950/80', border: 'border-rose-500/70', text: 'text-rose-300', badge: 'bg-rose-900 text-rose-200' },
+  EVIDENCE: { bg: 'bg-red-950/80', border: 'border-red-500/70', text: 'text-red-300', badge: 'bg-red-900 text-red-200' },
+  DOCUMENT: { bg: 'bg-slate-900/90', border: 'border-slate-500/70', text: 'text-slate-300', badge: 'bg-slate-800 text-slate-200' },
+  EVENT: { bg: 'bg-yellow-950/80', border: 'border-yellow-500/70', text: 'text-yellow-300', badge: 'bg-yellow-900 text-yellow-200' }
 };
 
 const COMMON_RELATIONSHIPS = [
@@ -70,45 +70,71 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
   const [customNodeType, setCustomNodeType] = useState<EntityType>('EVIDENCE');
   const [customNodeDesc, setCustomNodeDesc] = useState<string>('');
 
-  // Dragging state
+  // Dragging state (mouse & touch)
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const handleMouseDownNode = (e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
+  const startDrag = (clientX: number, clientY: number, nodeId: string) => {
     onUserActivity();
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const posX = clientX - rect.left;
+    const posY = clientY - rect.top;
 
     setDraggingNodeId(nodeId);
-    setDragOffset({ x: mouseX - node.x, y: mouseY - node.y });
+    setDragOffset({ x: posX - node.x, y: posY - node.y });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const moveDrag = (clientX: number, clientY: number) => {
     if (!draggingNodeId || !containerRef.current) return;
     onUserActivity();
 
     const rect = containerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const posX = clientX - rect.left;
+    const posY = clientY - rect.top;
 
-    const newX = Math.max(20, Math.min(rect.width - 200, mouseX - dragOffset.x));
-    const newY = Math.max(20, Math.min(rect.height - 100, mouseY - dragOffset.y));
+    // Constrain within container bounds
+    const newX = Math.max(10, Math.min(rect.width - 180, posX - dragOffset.x));
+    const newY = Math.max(10, Math.min(rect.height - 90, posY - dragOffset.y));
 
     onUpdateNodePosition(draggingNodeId, Math.round(newX), Math.round(newY));
   };
 
-  const handleMouseUp = () => {
+  const endDrag = () => {
     if (draggingNodeId) {
       setDraggingNodeId(null);
     }
   };
 
-  const handleStartConnect = (e: React.MouseEvent, nodeId: string) => {
+  // Mouse handlers
+  const handleMouseDownNode = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    startDrag(e.clientX, e.clientY, nodeId);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    moveDrag(e.clientX, e.clientY);
+  };
+
+  // Touch handlers for mobile
+  const handleTouchStartNode = (e: React.TouchEvent, nodeId: string) => {
+    e.stopPropagation();
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      startDrag(touch.clientX, touch.clientY, nodeId);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && draggingNodeId) {
+      const touch = e.touches[0];
+      moveDrag(touch.clientX, touch.clientY);
+    }
+  };
+
+  const handleStartConnect = (e: React.MouseEvent | React.TouchEvent, nodeId: string) => {
     e.stopPropagation();
     onUserActivity();
     if (connectingSourceId === nodeId) {
@@ -157,8 +183,8 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
     onUserActivity();
 
     const rect = containerRef.current?.getBoundingClientRect();
-    const defaultX = rect ? Math.max(40, Math.floor(Math.random() * (rect.width - 240))) : 80;
-    const defaultY = rect ? Math.max(40, Math.floor(Math.random() * (rect.height - 140))) : 80;
+    const defaultX = rect ? Math.max(20, Math.floor(Math.random() * (rect.width - 200))) : 40;
+    const defaultY = rect ? Math.max(20, Math.floor(Math.random() * (rect.height - 120))) : 40;
 
     const newNode: ChallengeBoardNode = {
       id: `CUSTOM_${Date.now()}`,
@@ -181,42 +207,45 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
 
   return (
     <div 
-      className="relative w-full h-[540px] bg-[#070B14] rounded-2xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col select-none"
+      className="relative w-full h-[450px] sm:h-[500px] lg:h-[560px] bg-[#070B14] rounded-2xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col select-none touch-manipulation"
       onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={endDrag}
+      onTouchCancel={endDrag}
     >
-      {/* Top Billboard Bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800/80 bg-slate-950/70 z-20">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-400">
-            <Share2 className="w-4 h-4" />
-            <span>INVESTIGATION BILLBOARD</span>
+      {/* Top Billboard Bar - responsive flex wrap */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-2.5 sm:py-3 border-b border-slate-800/80 bg-slate-950/80 z-20">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-400">
+            <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate max-w-[130px] sm:max-w-none">INVESTIGATION BILLBOARD</span>
           </div>
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
-            {nodes.length} ENTITIES • {edges.length} LINKS
+          <span className="text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 shrink-0">
+            {nodes.length} DOTS • {edges.length} LINKS
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {connectingSourceId && (
-            <div className="flex items-center gap-2 px-3 py-1 rounded bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-mono animate-pulse">
-              <span>Connecting from: <strong>{sourceNodeObj?.label}</strong></span>
+            <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[10px] sm:text-xs font-mono animate-pulse">
+              <span className="truncate max-w-[100px] sm:max-w-[150px]">Link: <strong>{sourceNodeObj?.label}</strong></span>
               <button 
                 onClick={() => setConnectingSourceId(null)}
-                className="text-amber-400 hover:text-white ml-2 text-xs underline"
+                className="text-amber-400 hover:text-white underline font-bold px-1"
               >
-                Cancel
+                ✕
               </button>
             </div>
           )}
 
           <button
             onClick={() => { onUserActivity(); setShowCustomNodeModal(true); }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 font-medium transition-colors"
+            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] sm:text-xs text-slate-200 font-medium transition-colors shrink-0"
           >
-            <Plus className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Add Custom Dot</span>
+            <Plus className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span>Add Dot</span>
           </button>
         </div>
       </div>
@@ -247,10 +276,11 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
             const tgt = nodes.find(n => n.id === edge.target);
             if (!src || !tgt) return null;
 
-            const x1 = src.x + 100;
-            const y1 = src.y + 38;
-            const x2 = tgt.x + 100;
-            const y2 = tgt.y + 38;
+            // Card center estimations: width approx 175px, height approx 70px
+            const x1 = src.x + 88;
+            const y1 = src.y + 35;
+            const x2 = tgt.x + 88;
+            const y2 = tgt.y + 35;
 
             const midX = (x1 + x2) / 2;
             const midY = (y1 + y2) / 2;
@@ -278,15 +308,15 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                 />
 
                 <foreignObject
-                  x={midX - 70}
+                  x={midX - 60}
                   y={midY - 14}
-                  width="140"
+                  width="120"
                   height="28"
                   className="overflow-visible"
                 >
                   <div className="flex items-center justify-center">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-950/90 border border-sky-500/50 shadow-lg text-[10px] font-mono text-sky-200 group-hover:border-rose-500 transition-colors">
-                      <span className="truncate max-w-[95px]">{edge.label}</span>
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-950/95 border border-sky-500/50 shadow-lg text-[9px] sm:text-[10px] font-mono text-sky-200 group-hover:border-rose-500 transition-colors">
+                      <span className="truncate max-w-[80px] sm:max-w-[95px]">{edge.label}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -296,7 +326,7 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                         className="text-slate-400 hover:text-rose-400 p-0.5"
                         title="Delete Connection"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   </div>
@@ -306,7 +336,7 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
           })}
         </svg>
 
-        {/* Nodes Layer */}
+        {/* Nodes Layer - responsive card sizes */}
         {nodes.map(node => {
           const colors = ENTITY_COLORS[node.type] || ENTITY_COLORS.DOCUMENT;
           const isSelectedSource = connectingSourceId === node.id;
@@ -316,24 +346,25 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
               key={node.id}
               style={{ left: `${node.x}px`, top: `${node.y}px` }}
               onClick={() => handleNodeClick(node.id)}
-              className={`absolute w-[200px] rounded-xl border p-3 cursor-pointer shadow-xl transition-shadow z-10 ${colors.bg} ${colors.border} ${
+              onTouchStart={(e) => handleTouchStartNode(e, node.id)}
+              className={`absolute w-[165px] sm:w-[190px] md:w-[210px] rounded-xl border p-2.5 sm:p-3 cursor-pointer shadow-xl transition-shadow z-10 touch-manipulation ${colors.bg} ${colors.border} ${
                 isSelectedSource 
                   ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-[#070B14] scale-105' 
                   : 'hover:border-slate-400'
               }`}
             >
               <div 
-                className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/60 cursor-grab active:cursor-grabbing"
+                className="flex items-center justify-between pb-1 mb-1 border-b border-slate-800/60 cursor-grab active:cursor-grabbing touch-none"
                 onMouseDown={(e) => handleMouseDownNode(e, node.id)}
               >
-                <span className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${colors.badge}`}>
+                <span className={`text-[8px] sm:text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${colors.badge}`}>
                   {node.type}
                 </span>
 
                 <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => handleStartConnect(e, node.id)}
-                    className={`p-1 rounded hover:bg-slate-800 text-[10px] transition-colors ${
+                    className={`p-1.5 rounded hover:bg-slate-800 transition-colors ${
                       isSelectedSource ? 'text-amber-400' : 'text-slate-400 hover:text-sky-300'
                     }`}
                     title={isSelectedSource ? 'Cancel Connection' : 'Connect to another node'}
@@ -346,7 +377,7 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                       onUserActivity();
                       onRemoveNode(node.id);
                     }}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-400 transition-colors"
+                    className="p-1.5 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-400 transition-colors"
                     title="Remove from Billboard"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -354,11 +385,11 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                 </div>
               </div>
 
-              <div className="text-xs font-bold text-white truncate mb-0.5">
+              <div className="text-[11px] sm:text-xs font-bold text-white truncate mb-0.5">
                 {node.label}
               </div>
               {node.description && (
-                <div className="text-[10px] text-slate-300 line-clamp-2 leading-snug">
+                <div className="text-[9px] sm:text-[10px] text-slate-300 line-clamp-2 leading-tight">
                   {node.description}
                 </div>
               )}
@@ -367,45 +398,46 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
         })}
 
         {nodes.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 pointer-events-none z-0">
-            <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mb-3">
-              <Share2 className="w-6 h-6" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 sm:p-6 pointer-events-none z-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mb-2 sm:mb-3">
+              <Share2 className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <h3 className="text-sm font-bold text-slate-300 mb-1">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-300 mb-1">
               THE BILLBOARD IS EMPTY
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm leading-relaxed mb-4">
-              Read through evidence clues in the panel below and click <strong className="text-slate-300">+ Add to Board</strong> to place suspect entities, vehicles, phones, and transactions here.
+            <p className="text-[11px] sm:text-xs text-slate-500 max-w-xs leading-relaxed mb-3">
+              Read evidence clues below and click <strong className="text-slate-300">+ Add to Board</strong> to place suspect entities, vehicles, and phones here.
             </p>
-            <div className="text-[11px] font-mono text-cyan-400 pointer-events-auto">
-              Connect dots manually by clicking the Link icon on any card.
+            <div className="text-[10px] sm:text-[11px] font-mono text-cyan-400">
+              Drag nodes to move • Tap Link icon to connect
             </div>
           </div>
         )}
       </div>
 
+      {/* Connect Modal */}
       {showEdgeModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-950 border border-sky-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-sm font-mono font-bold text-sky-400 mb-2 flex items-center gap-2">
-              <Link2 className="w-4 h-4" />
-              ESTABLISH INVESTIGATIVE RELATIONSHIP
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-950 border border-sky-500/50 rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl my-auto max-h-[90vh] flex flex-col">
+            <h3 className="text-xs sm:text-sm font-mono font-bold text-sky-400 mb-2 flex items-center gap-2">
+              <Link2 className="w-4 h-4 shrink-0" />
+              <span>ESTABLISH INVESTIGATIVE RELATIONSHIP</span>
             </h3>
-            <p className="text-xs text-slate-300 mb-4">
-              Connecting <strong>{sourceNodeObj?.label}</strong> to <strong>{targetNodeObj?.label}</strong>
+            <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+              Connecting <strong>{sourceNodeObj?.label}</strong> → <strong>{targetNodeObj?.label}</strong>
             </p>
 
-            <div className="mb-4">
+            <div className="mb-4 overflow-y-auto flex-1 pr-1">
               <label className="block text-[11px] font-mono text-slate-400 mb-1.5">
                 Select Relationship Type:
               </label>
-              <div className="grid grid-cols-2 gap-1.5 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-3">
                 {COMMON_RELATIONSHIPS.map(rel => (
                   <button
                     key={rel}
                     type="button"
                     onClick={() => { setEdgeLabel(rel); setCustomEdgeLabel(''); }}
-                    className={`px-2.5 py-1.5 rounded text-left text-xs font-medium border transition-colors ${
+                    className={`px-3 py-2 rounded-lg text-left text-xs font-medium border transition-colors ${
                       edgeLabel === rel && !customEdgeLabel
                         ? 'border-sky-500 bg-sky-950/60 text-sky-200'
                         : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
@@ -425,18 +457,18 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
               />
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => { setShowEdgeModal(false); setConnectingSourceId(null); }}
-                className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium text-center"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmConnection}
-                className="px-5 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-lg shadow-sky-500/20"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-lg shadow-sky-500/20 text-center"
               >
                 Create Connection
               </button>
@@ -445,18 +477,19 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
         </div>
       )}
 
+      {/* Custom Node Modal */}
       {showCustomNodeModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCreateCustomNode} className="bg-slate-950 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-sm font-mono font-bold text-amber-400 mb-2 flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              ADD CUSTOM INVESTIGATION DOT
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <form onSubmit={handleCreateCustomNode} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl my-auto max-h-[90vh] flex flex-col">
+            <h3 className="text-xs sm:text-sm font-mono font-bold text-amber-400 mb-1.5 flex items-center gap-2">
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>ADD CUSTOM INVESTIGATION DOT</span>
             </h3>
             <p className="text-xs text-slate-400 mb-4">
               Add an observation, transaction, or witness account to the billboard.
             </p>
 
-            <div className="space-y-3 mb-5">
+            <div className="space-y-3 mb-5 overflow-y-auto flex-1 pr-1">
               <div>
                 <label className="block text-[11px] font-mono text-slate-400 mb-1">
                   Entity Name / Label:
@@ -506,17 +539,17 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => setShowCustomNodeModal(false)}
-                className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium text-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 text-center"
               >
                 Add to Billboard
               </button>

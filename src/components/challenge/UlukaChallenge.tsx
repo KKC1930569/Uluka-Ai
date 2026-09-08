@@ -66,8 +66,8 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
       label: s.name,
       type: 'SUSPECT',
       description: `${s.role} (${s.alias || 'Suspect'})`,
-      x: 60 + (idx * 240),
-      y: 60
+      x: 30 + (idx * 190),
+      y: 40
     }));
 
     setBoardNodes(initialNodes);
@@ -88,7 +88,7 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
     }
   }, [isAfk]);
 
-  // Global event listener for activity
+  // Global event listener for activity (including touch events for mobile)
   useEffect(() => {
     const handleGlobalInteraction = () => {
       recordActivity();
@@ -97,12 +97,14 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
     window.addEventListener('mousemove', handleGlobalInteraction);
     window.addEventListener('keydown', handleGlobalInteraction);
     window.addEventListener('touchstart', handleGlobalInteraction);
+    window.addEventListener('touchmove', handleGlobalInteraction);
     window.addEventListener('mousedown', handleGlobalInteraction);
 
     return () => {
       window.removeEventListener('mousemove', handleGlobalInteraction);
       window.removeEventListener('keydown', handleGlobalInteraction);
       window.removeEventListener('touchstart', handleGlobalInteraction);
+      window.removeEventListener('touchmove', handleGlobalInteraction);
       window.removeEventListener('mousedown', handleGlobalInteraction);
     };
   }, [recordActivity]);
@@ -182,16 +184,16 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
     if (boardNodes.some(n => n.id === entity.id)) return;
 
     const currentCount = boardNodes.length;
-    const col = currentCount % 4;
-    const row = Math.floor(currentCount / 4);
+    const col = currentCount % 3;
+    const row = Math.floor(currentCount / 3);
 
     const newNode: ChallengeBoardNode = {
       id: entity.id,
       label: entity.label,
       type: entity.type,
       description: entity.description,
-      x: Math.min(650, 40 + (col * 220)),
-      y: Math.min(380, 180 + (row * 100))
+      x: Math.min(500, 20 + (col * 180)),
+      y: Math.min(340, 160 + (row * 90))
     };
 
     setBoardNodes(prev => [...prev, newNode]);
@@ -253,104 +255,103 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
   const timeDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
   return (
-    <div className="min-h-screen bg-[#070A12] text-slate-100 flex flex-col">
-      {/* Top Application Bar */}
-      <header className="border-b border-slate-800 bg-[#0B0F19]/90 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#070A12] text-slate-100 flex flex-col overflow-x-hidden">
+      {/* Top Application Bar - responsive layout without overflowing */}
+      <header className="border-b border-slate-800 bg-[#0B0F19]/95 backdrop-blur sticky top-0 z-30 px-2.5 sm:px-6 py-2 sm:py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           {/* Left: Navigation & Case Switcher */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
             <button
               onClick={() => onNavigate('landing')}
-              className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-slate-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-xs font-mono font-medium text-slate-400 hover:text-white transition-colors shrink-0 p-1 rounded-lg"
+              title="Return to Dashboard"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">DASHBOARD</span>
+              <ArrowLeft className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">DASHBOARD</span>
             </button>
 
-            <span className="text-slate-700">|</span>
+            <span className="text-slate-700 hidden sm:inline">|</span>
 
             <button
               onClick={() => { recordActivity(); setShowCaseSelectorModal(true); }}
-              className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-cyan-300 font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] sm:text-xs font-mono text-cyan-300 font-bold transition-colors truncate max-w-[130px] sm:max-w-[240px]"
             >
-              <FolderKanban className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="truncate max-w-[140px] sm:max-w-[220px]">{currentCase.id}: {currentCase.title}</span>
+              <FolderKanban className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="truncate">{currentCase.id}: {currentCase.title}</span>
             </button>
           </div>
 
-          {/* Center: Live Timer & Controls */}
-          {stage === 'PLAYING' && (
-            <div className="flex items-center gap-3 font-mono">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-950 border border-slate-800">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs text-slate-400">TIME</span>
-                <span className="text-sm font-bold text-white tracking-widest">{timeDisplay}</span>
-              </div>
+          {/* Right: Live Timer, Pause, and Final Accusation */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {stage === 'PLAYING' && (
+              <>
+                <div className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs">
+                  <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="font-bold text-white tracking-wider">{timeDisplay}</span>
+                </div>
 
-              <button
-                onClick={() => setIsPaused(true)}
-                className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Pause Investigation"
-              >
-                <Pause className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => setIsPaused(true)}
+                  className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+                  title="Pause Investigation"
+                  aria-label="Pause Investigation"
+                >
+                  <Pause className="w-3.5 h-3.5" />
+                </button>
 
-          {/* Right: Seed & Final Accusation */}
-          <div className="flex items-center gap-2.5">
-            {/* Seed badge */}
+                <button
+                  onClick={() => { recordActivity(); setShowAccusationModal(true)} }
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-[11px] sm:text-xs transition-all shadow-md shadow-amber-500/20 animate-pulse"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">FINAL ACCUSATION</span>
+                  <span className="sm:hidden">ACCUSE</span>
+                </button>
+              </>
+            )}
+
+            {/* Seed badge (visible on tablet/desktop) */}
             <button
               onClick={handleCopySeed}
-              className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800/80 text-[11px] font-mono text-slate-400 hover:text-slate-200 transition-colors"
+              className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800/80 text-[11px] font-mono text-slate-400 hover:text-slate-200 transition-colors"
               title="Copy Playthrough Seed"
             >
               <span>SEED: {currentSeed}</span>
               {seedCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
             </button>
-
-            {stage === 'PLAYING' && (
-              <button
-                onClick={() => { recordActivity(); setShowAccusationModal(true); }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold text-xs transition-all shadow-lg shadow-amber-500/20 animate-pulse"
-              >
-                <ShieldAlert className="w-4 h-4" />
-                <span>FINAL ACCUSATION</span>
-              </button>
-            )}
           </div>
         </div>
       </header>
 
       {/* Main Mode View */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6 overflow-x-hidden">
         {/* BRIEFING STAGE */}
         {stage === 'BRIEFING' && (
-          <div className="max-w-3xl mx-auto py-8">
-            <div className="rounded-2xl border-2 border-cyan-500/40 bg-[#0B0F19] p-6 sm:p-8 shadow-2xl text-center mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-4">
-                <FolderKanban className="w-8 h-8" />
+          <div className="max-w-3xl mx-auto py-4 sm:py-8">
+            <div className="rounded-2xl border border-cyan-500/40 bg-[#0B0F19] p-4 sm:p-8 shadow-2xl text-center mb-6">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-3 sm:mb-4">
+                <FolderKanban className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider mb-2 inline-block">
+              <span className="px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300 text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider mb-2 inline-block">
                 CASE {currentCase.id} • {currentCase.difficulty} DIFFICULTY
               </span>
 
-              <h1 className="text-2xl sm:text-4xl font-black text-white mb-2">
+              <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white mb-1.5">
                 {currentCase.title}
               </h1>
-              <p className="text-sm font-semibold text-amber-300 mb-6 font-mono">
+              <p className="text-xs sm:text-sm font-semibold text-amber-300 mb-4 sm:mb-6 font-mono">
                 {currentCase.subtitle} // {currentCase.category}
               </p>
 
-              <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 text-left text-xs text-slate-200 leading-relaxed mb-6 space-y-3 font-sans shadow-inner">
+              <div className="p-3.5 sm:p-5 rounded-xl bg-slate-950 border border-slate-800 text-left text-xs text-slate-200 leading-relaxed mb-4 sm:mb-6 space-y-3 font-sans shadow-inner">
                 <p>{currentCase.briefing}</p>
-                <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-800/40 text-amber-200 font-mono text-[11px]">
-                  <strong>INVESTIGATION MISSION:</strong> {currentCase.targetQuestion}
+                <div className="p-2.5 sm:p-3 rounded-lg bg-amber-950/30 border border-amber-800/40 text-amber-200 font-mono text-[11px]">
+                  <strong className="text-amber-300">INVESTIGATION MISSION:</strong> {currentCase.targetQuestion}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8 text-left text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-6 sm:mb-8 text-left text-xs font-mono">
                 <div className="p-3 rounded-xl border border-slate-800 bg-slate-950">
                   <span className="text-slate-500 block mb-0.5">SUSPECTS</span>
                   <span className="font-bold text-white">{currentCase.suspects.length} Identified Persons</span>
@@ -365,10 +366,10 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 justify-center">
                 <button
                   onClick={() => initializeGame(activeCaseId, currentSeed)}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm transition-all shadow-xl shadow-amber-500/25"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm transition-all shadow-xl shadow-amber-500/25"
                 >
                   <Play className="w-4 h-4" />
                   <span>START INVESTIGATION</span>
@@ -376,7 +377,7 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
 
                 <button
                   onClick={() => setShowCaseSelectorModal(true)}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-800 transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-800 transition-colors"
                 >
                   <Shuffle className="w-4 h-4" />
                   <span>CHOOSE ANOTHER CASE</span>
@@ -388,7 +389,7 @@ export const UlukaChallenge: React.FC<UlukaChallengeProps> = ({ onNavigate }) =>
 
         {/* ACTIVE PLAYING STAGE */}
         {stage === 'PLAYING' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Billboard Canvas (Player Connects the Dots) */}
             <section>
               <InvestigationBoard
