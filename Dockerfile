@@ -18,12 +18,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code and compiled frontend assets
+# Copy backend code, entrypoint, and compiled frontend assets
 COPY server/ ./server/
+COPY main.py ./main.py
 COPY --from=frontend-builder /app/dist ./dist
 
 EXPOSE 8000
 
-# Run FastAPI backend with Uvicorn (serves both API and Vite UI)
-WORKDIR /app/server
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run FastAPI backend (serves both API and Vite UI on Railway $PORT)
+CMD ["python", "main.py"]

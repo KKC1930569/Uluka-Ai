@@ -9,3 +9,4 @@ setup_config.py
 create_src.py
 write_workspace.py
 rewrite_challenge.py
+*.exe

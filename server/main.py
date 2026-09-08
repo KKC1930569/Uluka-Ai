@@ -1,4 +1,12 @@
 import os
+import sys
+from pathlib import Path
+
+# Ensure the server directory is in sys.path so modules like synthetic_data and entity_resolution can always be imported
+SERVER_DIR = str(Path(__file__).resolve().parent)
+if SERVER_DIR not in sys.path:
+    sys.path.insert(0, SERVER_DIR)
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
